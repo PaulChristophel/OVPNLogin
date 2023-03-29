@@ -38,6 +38,8 @@ jobs:
                      -t $ACR_URL/pmartin47/openvpn:latest \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }} \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine
+        podman run -d --name ovpn_login docker.io/pcm0/openvpn sleep 1000
+        podman cp ovpn_login:/usr/local/bin/ovpn_login .
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
@@ -54,7 +56,7 @@ jobs:
     - name: Create a Release
       uses: ncipollo/release-action@v1
       with:
-        #artifacts: "release.tar.gz,foo/*.txt"
+        artifacts: "ovpn_login"
         #bodyFile: "body.md"
         token: ${{ secrets.RELEASE_TOKEN }}
         name:  ${{ github.ref_name }} 
