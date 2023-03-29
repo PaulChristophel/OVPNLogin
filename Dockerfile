@@ -11,7 +11,8 @@ RUN make upgrade && make build mode=prod
 FROM alpine:edge AS app
 RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables sudo
 ARG USER_ID=100
-RUN mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/ipv4.conf; modprobe tun && echo "tun" >> /etc/modules-load.d/tun.conf
+COPY net.sh /
+RUN sh /net.sh
 RUN chown openvpn:openvpn /var/log
 COPY --from=builder /usr/src/app/bin/release/ovpn_login /usr/local/bin
 USER ${USER_ID}
