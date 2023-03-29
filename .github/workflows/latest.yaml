@@ -66,5 +66,5 @@ jobs:
           To download this release:
           podman pull docker.io/pcm0/openvpn
           Or to specify a build:
-          podman pull docker.io/pcm0/openvpn:${{ env.BUILD }}-alpine
+          podman pull docker.io/pcm0/openvpn:latest-alpine
           podman pull docker.io/pcm0/openvpn:${{ env.BUILD }}-alpine

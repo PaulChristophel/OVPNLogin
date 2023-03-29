@@ -71,7 +71,7 @@ func Validate(username string, providedPassword string) error {
 		return err
 	}
 	if !passwordMatch {
-		return fmt.Errorf("Username or password mismatch")
+		return fmt.Errorf("username or password mismatch")
 	}
 	return nil
 }
