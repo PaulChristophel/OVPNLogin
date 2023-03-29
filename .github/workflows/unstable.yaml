@@ -25,7 +25,6 @@ jobs:
       run: |
         echo "SHORT_SHA=${GITHUB_SHA:0:7}" | tee -a $GITHUB_ENV
     - name: Build ovpn_login
-      continue-on-error: true
       run: |
         podman pull golang:alpine
         podman pull alpine:edge
