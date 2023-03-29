@@ -36,29 +36,11 @@ jobs:
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
-        podman images | awk "/docker.io\/pcm0\/openvpn/&&/${{ env.SHORT_SHA }}/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
-        podman images | awk "/docker.io\/pcm0\/openvpn/&&/dev/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/docker.io/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
         podman logout
         podman login $ACR_URL --username $ACR_USERNAME --password $ACR_PASSWORD
-        podman images | awk "/$ACR_URL\/pmartin47\/openvpn/&&/${{ env.SHORT_SHA }}/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
-        podman images | awk "/$ACR_URL\/pmartin47\/openvpn/&&/dev/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/$ACR_URL/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
         podman logout
     - name: Docker System Prune
       run: |
         podman system prune --force --all
-    - name: Create a Release
-      uses: ncipollo/release-action@v1
-      with:
-        #artifacts: "release.tar.gz,foo/*.txt"
-        #bodyFile: "body.md"
-        prerelease: true
-        token: ${{ secrets.RELEASE_TOKEN }}
-        name:  ovpn_login-${{ env.SHORT_SHA }} 
-        body: |+
-          CHANGELOG:
-          ${{ github.event.head_commit.message }}
-          To download this release:
-          podman pull docker.io/pcm0/openvpn
-          Or to specify a build:
-          podman pull docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine
-          podman pull docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine
