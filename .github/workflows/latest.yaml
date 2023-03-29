@@ -58,7 +58,7 @@ jobs:
       with:
         artifacts: "ovpn_login"
         #bodyFile: "body.md"
-        token: ${{ secrets.RELEASE_TOKEN }}
+        #token: ${{ secrets.RELEASE_TOKEN }}
         name:  ${{ github.ref_name }} 
         body: |+
           CHANGELOG:
