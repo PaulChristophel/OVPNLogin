@@ -36,10 +36,10 @@ jobs:
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
-        podman images | awk "/docker.io/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/docker.io\/pcm0/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
         podman logout
         podman login $ACR_URL --username $ACR_USERNAME --password $ACR_PASSWORD
-        podman images | awk "/$ACR_URL/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/$ACR_URL\/pmartin47/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
         podman logout
     - name: Docker System Prune
       run: |
