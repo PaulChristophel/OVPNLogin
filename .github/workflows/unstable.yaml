@@ -1,0 +1,64 @@
+name: Unstable Release
+
+on:
+  push:
+    # Pattern matched against refs/tags
+    branches:
+      - master
+    tags:
+      - '!v[0-9]*.[0-9]*.[0-9]*'
+      - '!v[0-9]*.[0-9]*.[0-9]*-[a-zA-Z]*.*'
+      - '!v[0-9]*.[0-9]*.[0-9]*-[a-zA-Z]*.[0-9]*.*'
+
+jobs:
+  build-ovpn_login-dev:
+    runs-on: ubuntu-22.04
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      ACR_URL: ${{ secrets.ACR_URL }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get Build Version
+      run: |
+        echo "SHORT_SHA=${GITHUB_SHA:0:7}" | tee -a $GITHUB_ENV
+    - name: Build ovpn_login
+      continue-on-error: true
+      run: |
+        podman pull golang:alpine
+        podman pull alpine:edge
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . \
+                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:dev-alpine
+    - name: Push to Docker Hub
+      run: |
+        podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        podman images | awk "/docker.io\/pcm0\/openvpn/&&/${{ env.SHORT_SHA }}/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/docker.io\/pcm0\/openvpn/&&/dev/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman logout
+        podman login $ACR_URL --username $ACR_USERNAME --password $ACR_PASSWORD
+        podman images | awk "/$ACR_URL\/pmartin47\/openvpn/&&/${{ env.SHORT_SHA }}/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman images | awk "/$ACR_URL\/pmartin47\/openvpn/&&/dev/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
+        podman logout
+    - name: Docker System Prune
+      run: |
+        podman system prune --force --all
+    - name: Create a Release
+      uses: ncipollo/release-action@v1
+      with:
+        #artifacts: "release.tar.gz,foo/*.txt"
+        #bodyFile: "body.md"
+        prerelease: true
+        token: ${{ secrets.RELEASE_TOKEN }}
+        name:  ${{ github.ref_name }} 
+        body: |+
+          CHANGELOG:
+          ${{ github.event.head_commit.message }}
+          To download this release:
+          podman pull docker.io/pcm0/openvpn
+          Or to specify a build:
+          podman pull docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine
+          podman pull docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine
