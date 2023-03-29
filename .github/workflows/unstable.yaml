@@ -53,7 +53,7 @@ jobs:
         #bodyFile: "body.md"
         prerelease: true
         token: ${{ secrets.RELEASE_TOKEN }}
-        name:  ${{ env.SHORT_SHA }} 
+        name:  ovpn_login-${{ env.SHORT_SHA }} 
         body: |+
           CHANGELOG:
           ${{ github.event.head_commit.message }}
