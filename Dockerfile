@@ -10,7 +10,7 @@ RUN make upgrade && make build mode=prod
 FROM alpine/k8s:1.26.3 AS k8s
 
 FROM alpine:edge AS app
-COPY --from=builder /usr/src/app/bin/release/ovpn_login /usr/local/bin
+COPY --from=builder /usr/src/app/bin/release/ovpn_login /var/lib/openvpn
 COPY --from=k8s /usr/bin/kubectl /usr/bin/
 RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables
 COPY net.sh /
@@ -20,6 +20,7 @@ RUN chown openvpn:openvpn /var/lib/openvpn /var/log
 ARG USER_ID=100
 USER ${USER_ID}
 ENV OPENVPN=/var/lib/openvpn
+ENV PATH=/var/lib/openvpn:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EXPOSE 1194/udp
 EXPOSE 1194/tcp
 ENTRYPOINT ["/usr/sbin/openvpn"]
