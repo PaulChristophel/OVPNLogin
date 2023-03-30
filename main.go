@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -30,7 +29,7 @@ func main() {
 		log.Fatalf("usage: ovpn_login <credentials_file>")
 	}
 
-	credentialsBytes, err := ioutil.ReadFile(os.Args[1])
+	credentialsBytes, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalf("failed to read credentials file: %v", err)
 	}

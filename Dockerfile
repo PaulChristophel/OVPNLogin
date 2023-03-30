@@ -15,10 +15,11 @@ COPY --from=k8s /usr/bin/kubectl /usr/bin/
 RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables
 COPY net.sh /
 RUN sh /net.sh
-RUN chown openvpn:openvpn /var/log
+RUN mkdir /var/lib/openvpn
+RUN chown openvpn:openvpn /var/lib/openvpn /var/log
 ARG USER_ID=100
 USER ${USER_ID}
-ENV OPENVPN=/etc/openvpn
+ENV OPENVPN=/var/lib/openvpn
 EXPOSE 1194/udp
 EXPOSE 1194/tcp
 ENTRYPOINT ["/usr/sbin/openvpn"]
