@@ -1,5 +1,4 @@
 FROM golang:alpine AS builder
-
 WORKDIR /usr/src/app
 RUN apk upgrade --update --no-cache && apk add --update --no-cache make
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
@@ -8,13 +7,16 @@ RUN apk upgrade --update --no-cache && apk add --update --no-cache make
 COPY . .
 RUN make upgrade && make build mode=prod
 
+FROM alpine/k8s:1.26.3 AS k8s
+
 FROM alpine:edge AS app
-RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables sudo
-ARG USER_ID=100
+COPY --from=builder /usr/src/app/bin/release/ovpn_login /usr/local/bin
+COPY --from=k8s /usr/bin/kubectl /usr/bin/
+RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables
 COPY net.sh /
 RUN sh /net.sh
 RUN chown openvpn:openvpn /var/log
-COPY --from=builder /usr/src/app/bin/release/ovpn_login /usr/local/bin
+ARG USER_ID=100
 USER ${USER_ID}
 ENV OPENVPN=/etc/openvpn
 EXPOSE 1194/udp
