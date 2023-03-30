@@ -51,7 +51,10 @@ func main() {
 func Validate(username string, providedPassword string) error {
 	config, err := loadConfig("/etc/openvpn/ovpn_login.toml")
 	if err != nil {
-		return err
+		config, err = loadConfig("ovpn_login.toml")
+		if err != nil {
+			return err
+		}
 	}
 
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=%s port=%s",
