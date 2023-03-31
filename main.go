@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pelletier/go-toml"
@@ -50,22 +49,9 @@ func main() {
 }
 
 func Validate(username string, providedPassword string) error {
-	config, err := loadConfig("/etc/openvpn/ovpn_login.toml")
+	config, err := loadConfig("/var/lib/openvpn/ovpn_login.toml")
 	if err != nil {
-		// Get the current working directory
-		cwd, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-
-		// Construct the file path in the current working directory
-		configPath := filepath.Join(cwd, "ovpn_login.toml")
-
-		// Load the config from the constructed file path
-		config, err = loadConfig(configPath)
-		if err != nil {
-			panic(err)
-		}
+		return err
 	}
 
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=%s port=%s",
