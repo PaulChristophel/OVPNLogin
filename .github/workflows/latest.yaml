@@ -39,7 +39,7 @@ jobs:
                      -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }} \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine
         podman run -d --name ovpn_login docker.io/pcm0/openvpn sleep 1000
-        podman cp ovpn_login:/usr/local/bin/ovpn_login .
+        podman cp ovpn_login:/var/lib/openvpn/ovpn_login .
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
