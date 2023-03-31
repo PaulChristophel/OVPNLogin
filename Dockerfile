@@ -15,7 +15,7 @@ RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificat
 RUN usermod -d /var/lib/openvpn openvpn && apk del shadow
 COPY net.sh /
 RUN sh /net.sh
-RUN mkdir /var/lib/openvpn
+RUN mkdir -p /var/lib/openvpn/tmp
 RUN chown openvpn:openvpn /var/lib/openvpn /var/log
 ARG USER_ID=100
 USER ${USER_ID}
