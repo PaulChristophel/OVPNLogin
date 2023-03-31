@@ -11,7 +11,8 @@ FROM alpine/k8s:1.26.3 AS k8s
 
 FROM alpine:edge AS app
 COPY --from=k8s /usr/bin/kubectl /usr/bin/
-RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables
+RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables shadow
+RUN usermod -d /var/lib/openvpn openvpn && apk del shadow
 COPY net.sh /
 RUN sh /net.sh
 RUN mkdir /var/lib/openvpn
