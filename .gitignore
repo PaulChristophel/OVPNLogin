@@ -1,6 +1,3 @@
-*.toml
-*.conf
 secret
-*.txt
 bin/
 keys/

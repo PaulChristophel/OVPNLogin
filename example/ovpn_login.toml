@@ -1,0 +1,7 @@
+[database]
+user = "openvpn"
+password = "password"
+dbname = "dbname"
+host = "pgsql.example.com"
+sslmode = "require"
+table = "ovpn_login"
