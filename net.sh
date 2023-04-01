@@ -29,6 +29,7 @@ net.ipv4.tcp_syncookies=1
 EOF
 
 # We need to do all required network configuration so openvpn does not have to
+# the network setup can be done as part of an init container
 cp -p /sbin/ip /sbin/ip_real
 echo "#!/bin/sh" > /sbin/ip
 echo 'echo "$@" >> /tmp/ip_res' >> /sbin/ip

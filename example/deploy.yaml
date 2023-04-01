@@ -1,0 +1,229 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: openvpn
+  name: openvpn
+  namespace: openvpn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openvpn
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: openvpn
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 101
+      serviceAccountName: openvpn-service-reader
+      initContainers:
+      - name: init
+        image: docker.io/pcm0/openvpn:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "/root/init.sh"]
+        securityContext:
+          capabilities:
+            add:
+            - DAC_OVERRIDE
+            - NET_ADMIN
+            - NET_RAW
+            - MKNOD
+            - SETGID
+            - SETUID
+            - SYS_MODULE
+            drop:
+            - ALL
+          privileged: true
+        volumeMounts:
+        - name: kube-api-access
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+        - mountPath: /root/init.sh
+          name: openvpn-configmap
+          subPath: init.sh
+        - mountPath: /dev/net
+          name: net
+      containers:
+      - image: docker.io/pcm0/openvpn:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          runAsNonRoot: true
+          runAsUser: 100
+          runAsGroup: 101
+          capabilities:
+            drop:
+            - ALL
+        name: udp
+        resources: {}
+        command:
+        - /bin/sh
+        - -c
+        - /usr/sbin/openvpn --config /var/lib/openvpn/server.conf
+        readinessProbe:
+          exec:
+            command:
+            - test
+            - /var/lib/openvpn/tmp/alive
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - test
+            - /var/lib/openvpn/tmp/openvpn.pid
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 2
+        ports:
+        - containerPort: 1194
+          name: openvpn-udp
+          protocol: UDP
+        volumeMounts:
+        - mountPath: /etc/sysctl.d/ipv4.conf
+          name: openvpn-configmap
+          subPath: ipv4.conf
+
+        - mountPath: /var/lib/openvpn/server.conf
+          name: openvpn-configmap
+          subPath: udp_server.conf
+
+        - mountPath: /var/lib/openvpn/ca.crt
+          name: openvpn-configmap
+          subPath: ca.crt
+
+        - mountPath: /var/lib/openvpn/server.crt
+          name: openvpn-configmap
+          subPath: server.crt
+
+        - mountPath: /var/lib/openvpn/dh8192.pem
+          name: openvpn-configmap
+          subPath: dh8192.pem
+
+        - mountPath: /var/lib/openvpn/tls-crypt.pem
+          name: openvpn-configmap
+          subPath: tls-crypt.pem
+
+        - mountPath: /var/lib/openvpn/server.pem
+          name: openvpn-secret
+          subPath: server.pem
+
+        - mountPath: /var/lib/openvpn/ovpn_login.toml
+          name: openvpn-secret
+          subPath: ovpn_login.toml
+
+        - mountPath: /dev/net
+          name: net
+
+      - image: docker.io/pcm0/openvpn:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          runAsNonRoot: true
+          runAsUser: 100
+          runAsGroup: 101
+          capabilities:
+            drop:
+            - all
+        name: tcp
+        resources: {}
+        command:
+        - /bin/sh
+        - -c
+        - /usr/sbin/openvpn --config /var/lib/openvpn/server.conf
+        ports:
+        - containerPort: 1194
+          name: openvpn-tcp
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - test
+            - /var/lib/openvpn/tmp/alive
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - test
+            - /var/lib/openvpn/tmp/openvpn.pid
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 2
+        volumeMounts:
+        - mountPath: /etc/sysctl.d/ipv4.conf
+          name: openvpn-configmap
+          subPath: ipv4.conf
+
+        - mountPath: /var/lib/openvpn/server.conf
+          name: openvpn-configmap
+          subPath: tcp_server.conf
+
+        - mountPath: /var/lib/openvpn/ca.crt
+          name: openvpn-configmap
+          subPath: ca.crt
+
+        - mountPath: /var/lib/openvpn/server.crt
+          name: openvpn-configmap
+          subPath: server.crt
+
+        - mountPath: /var/lib/openvpn/dh8192.pem
+          name: openvpn-configmap
+          subPath: dh8192.pem
+
+        - mountPath: /var/lib/openvpn/tls-crypt.pem
+          name: openvpn-configmap
+          subPath: tls-crypt.pem
+
+        - mountPath: /var/lib/openvpn/server.pem
+          name: openvpn-secret
+          subPath: server.pem
+
+        - mountPath: /var/lib/openvpn/ovpn_login.toml
+          name: openvpn-secret
+          subPath: ovpn_login.toml
+
+        - mountPath: /dev/net
+          name: net
+
+      volumes:
+        - name: openvpn-configmap
+          configMap:
+            defaultMode: 420
+            name: openvpn
+        - name: openvpn-secret
+          secret:
+            defaultMode: 420
+            secretName: openvpn
+        - name: logs
+          emptyDir: {}
+        - name: net
+          emptyDir: {}
+        - name: kube-api-access
+          projected:
+            sources:
+            - serviceAccountToken:
+                path: token
+                expirationSeconds: 600
+            - configMap:
+                name: kube-root-ca.crt
+                items:
+                - key: ca.crt
+                  path: ca.crt          
+status: {}

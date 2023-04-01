@@ -1,0 +1,152 @@
+apiVersion: v1
+data:
+  init.sh: |-
+    #!/bin/sh
+
+    mknod /dev/net/tun0 c 10 200 || echo "error setting: mknod /dev/net/tun0 c 10 200"
+    mknod /dev/net/tun1 c 10 200 || echo "error setting: mknod /dev/net/tun1 c 10 200"
+
+    chmod 600 /dev/net/tun0 || echo "error setting: chmod 600 /dev/net/tun0"
+    chmod 600 /dev/net/tun1 || echo "error setting: chmod 600 /dev/net/tun1"
+
+    chown openvpn:openvpn /dev/net/tun0 || echo "error setting: chown openvpn:openvpn /dev/net/tun0"
+    chown openvpn:openvpn /dev/net/tun1 || echo "error setting: chown openvpn:openvpn /dev/net/tun1"
+
+    modprobe tun || echo "error setting: modprobe tun"
+    echo "tun" >> /etc/modules-load.d/tun.conf
+
+    # Set up routing rules
+    # Only masquerade traffic destined for a service you want to load balance,
+    # and only forward specific ports.
+    # replace **SERVICENAME** with the service name
+    # replace **FAKEIP** with the IP address that clients will "connect" to.
+    # Packets to the FAKEIP get rerouted to the proper service endpoint in the cluster
+    kubectl get svc --all-namespaces -o jsonpath='{range .items[?(@.metadata.name=="**SERVICENAME**")]}{.metadata.namespace}{"\t"}{.spec.clusterIP}{"\t"}{range .spec.ports[?(@.nodePort)]}{.nodePort}{"\t"}{end}{"\n"}{end}' |\
+    awk 'BEGIN { system("iptables -t nat -F;") }
+        {
+          pre = "iptables -t nat -m comment --comment " $1 " -A PREROUTING -d **FAKEIP** -p tcp --dport " $3 ":" $4 " -j DNAT --to-destination " $2;
+          udp = "iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -m comment --comment " $1 " -d " $2 " -o eth0 -j MASQUERADE";
+          tcp = "iptables -t nat -A POSTROUTING -s 10.1.0.0/16 -m comment --comment " $1 " -d " $2 " -o eth0 -j MASQUERADE";
+          
+          system(pre);
+          system(udp);
+          system(tcp);
+        }
+        END { system("iptables -t nat --list-rules;") }'    
+
+    # Create the network interfaces
+    openvpn --rmtun --dev tun0
+    openvpn --mktun --dev tun0 --dev-type tun --user openvpn --group openvpn
+    openvpn --rmtun --dev tun1
+    openvpn --mktun --dev tun1 --dev-type tun --user openvpn --group openvpn
+
+    # Set up the routing tables
+    /sbin/ip_real link set dev tun0 up mtu 1500
+    /sbin/ip_real link set dev tun0 up
+    /sbin/ip_real addr add dev tun0 local 10.0.0.1 peer 10.0.0.2
+    /sbin/ip_real route add 10.0.0.0/16 via 10.0.0.2
+
+    /sbin/ip_real link set dev tun1 up mtu 1500
+    /sbin/ip_real link set dev tun1 up
+    /sbin/ip_real addr add dev tun1 local 10.1.0.1 peer 10.1.0.2
+    /sbin/ip_real route add 10.1.0.0/16 via 10.1.0.2
+
+    # Log the routing table
+    /sbin/ip_real route
+  ipv4.conf: |-
+    # Enable IP forwarding
+    net.ipv4.ip_forward=1
+
+    # Disable ICMP redirect acceptance
+    net.ipv4.conf.all.accept_redirects=0
+    net.ipv4.conf.default.accept_redirects=0
+
+    # Disable ICMP redirect sending
+    net.ipv4.conf.all.send_redirects=0
+    net.ipv4.conf.default.send_redirects=0
+
+    # Enable loose reverse path filtering
+    net.ipv4.conf.all.rp_filter=2
+    net.ipv4.conf.default.rp_filter=2
+
+    # Enable SYN cookies
+    net.ipv4.tcp_syncookies=1
+
+    # Enable tcp_fastopen for client and server
+    net.ipv4.tcp_fastopen=5
+  ca.crt: ""
+  dh8192.pem: ""
+  udp_server.conf: |-
+    writepid /var/lib/openvpn/tmp/openvpn.pid
+    up "/bin/sh -c 'touch /var/lib/openvpn/tmp/alive'"
+    down "/bin/sh -c 'rm /var/lib/openvpn/tmp/alive'"
+    cd /var/lib/openvpn
+    multihome
+    port 1194
+    proto udp
+    dev tun0
+    float
+    ca ca.crt
+    cert server.crt
+    key server.pem
+    auth-nocache
+    dh dh8192.pem
+    tls-crypt tls-crypt.pem
+    server 10.0.0.0 255.255.0.0
+    ifconfig-pool-persist ipp.txt
+    tmp-dir /var/lib/openvpn/tmp
+    keepalive 20 120
+    persist-key
+    persist-tun
+    status status.log
+    verb 4
+    script-security 2
+    auth-user-pass-verify ovpn_login via-file
+    verify-client-cert none
+    username-as-common-name
+    data-ciphers AES-256-GCM:AES-128-GCM:?CHACHA20-POLY1305
+    data-ciphers-fallback AES-256-CBC
+    auth SHA512
+    push "route **FAKEIP** 255.255.255.255"
+    mtu-disc yes
+    mtu-test
+  tcp_server.conf: |-
+    writepid /var/lib/openvpn/tmp/openvpn.pid
+    up "/bin/sh -c 'touch /var/lib/openvpn/tmp/alive'"
+    down "/bin/sh -c 'rm /var/lib/openvpn/tmp/alive'"
+    cd /var/lib/openvpn
+    port 1194
+    proto tcp
+    dev tun1
+    float
+    ca ca.crt
+    cert server.crt
+    key server.pem
+    auth-nocache
+    dh dh8192.pem
+    tls-crypt tls-crypt.pem
+    server 10.1.0.0 255.255.0.0
+    ifconfig-pool-persist ipp.txt
+    tmp-dir /var/lib/openvpn/tmp
+    keepalive 20 120
+    persist-key
+    persist-tun
+    status status.log
+    verb 4
+    script-security 2
+    auth-user-pass-verify ovpn_login via-file
+    verify-client-cert none
+    username-as-common-name
+    data-ciphers AES-256-GCM:AES-128-GCM:?CHACHA20-POLY1305
+    data-ciphers-fallback AES-256-CBC
+    auth SHA512
+    push "route **FAKEIP** 255.255.255.255"
+    mtu-disc yes
+  server.crt: ""
+  tls-crypt.pem: ""
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: openvpn
+  namespace: openvpn
+
