@@ -21,6 +21,7 @@ spec:
         runAsUser: 0
         runAsGroup: 0
         fsGroup: 101
+      automountServiceAccountToken: false
       serviceAccountName: openvpn-service-reader
       initContainers:
       - name: init
