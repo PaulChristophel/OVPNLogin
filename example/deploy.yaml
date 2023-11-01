@@ -61,6 +61,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
         name: udp
         resources: {}
         command:
@@ -137,6 +138,7 @@ spec:
           capabilities:
             drop:
             - all
+          readOnlyRootFilesystem: true
         name: tcp
         resources: {}
         command:
