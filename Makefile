@@ -12,7 +12,7 @@ build: clean tidy test
 ifeq ($(mode), dev)
 	go build -o $(debug_dir)/${BINARY_NAME}
 else
-	go build -o $(release_dir)/${BINARY_NAME}
+	go build -ldflags="-w -s" -o $(release_dir)/${BINARY_NAME}
 endif
 
 upgrade:
@@ -28,3 +28,9 @@ clean:
 	go clean
 	go fmt ./...
 	rm -f $(debug_dir)/${BINARY_NAME} $(release_dir)/${BINARY_NAME}
+
+podman:
+	podman build . -t oitacr.azurecr.io/pmartin47/openvpn:latest
+
+push:
+	podman push oitacr.azurecr.io/pmartin47/openvpn:latest
