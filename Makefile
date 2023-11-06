@@ -30,6 +30,9 @@ clean:
 	rm -f $(debug_dir)/${BINARY_NAME} $(release_dir)/${BINARY_NAME}
 
 podman:
+	podman pull golang:alpine
+	podman pull docker.io/alpine/k8s:1.28.3
+	podman pull alpine:edge
 	podman build . -t oitacr.azurecr.io/pmartin47/openvpn:latest
 
 push:
