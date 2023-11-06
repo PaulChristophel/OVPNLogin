@@ -14,8 +14,7 @@ COPY --from=k8s /usr/bin/kubectl /usr/bin/
 RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn openssl iptables shadow
 RUN usermod -d /var/lib/openvpn openvpn && apk del shadow
 COPY net.sh /
-RUN sh /net.sh
-COPY /sbin/ip /sbin/ip_real
+RUN sh /net.sh && cp /sbin/ip /sbin/ip_real
 RUN mkdir -p /var/lib/openvpn/tmp
 RUN chown -R openvpn:openvpn /var/lib/openvpn /var/log
 ARG USER_ID=100
