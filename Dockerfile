@@ -15,6 +15,7 @@ RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificat
 RUN usermod -d /var/lib/openvpn openvpn && apk del shadow
 COPY net.sh /
 RUN sh /net.sh
+COPY /sbin/ip /sbin/ip_real
 RUN mkdir -p /var/lib/openvpn/tmp
 RUN chown -R openvpn:openvpn /var/lib/openvpn /var/log
 ARG USER_ID=100
@@ -25,7 +26,7 @@ ENV PATH=/var/lib/openvpn:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbi
 EXPOSE 1194/udp
 EXPOSE 1194/tcp
 COPY --from=builder /usr/src/app/bin/release/ovpn_login /var/lib/openvpn
-#COPY --from=builder /usr/src/app/bin/release/ip_fake /sbin/ip
+COPY --from=builder /usr/src/app/bin/release/ip_fake /sbin/ip
 COPY --from=builder /usr/src/app/bin/release/checkpath /sbin/checkpath
 COPY --from=builder /usr/src/app/bin/release/alive /sbin/alive
 ENTRYPOINT ["/usr/sbin/openvpn"]
