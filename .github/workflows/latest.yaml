@@ -27,7 +27,8 @@ jobs:
       run: |
         podman pull golang:alpine
         podman pull alpine:edge
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . \
+	podman pull docker.io/alpine/k8s:1.28.3
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=app \
                      -t docker.io/pcm0/openvpn:latest-alpine \
                      -t docker.io/pcm0/openvpn:${{ env.BUILD }}-alpine \
                      -t docker.io/pcm0/openvpn:latest \
@@ -38,6 +39,18 @@ jobs:
                      -t $ACR_URL/pmartin47/openvpn:latest \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }} \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=slim \
+                     -t docker.io/pcm0/openvpn:slim-alpine \
+                     -t docker.io/pcm0/openvpn:${{ env.BUILD }}-slim-alpine \
+                     -t docker.io/pcm0/openvpn:slim \
+                     -t docker.io/pcm0/openvpn:${{ env.BUILD }}-slim \
+                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-slim-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:slim-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }}-slim-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:slim \
+                     -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }}-slim \
+                     -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-slim-alpine
+
         podman run -d --name ovpn_login docker.io/pcm0/openvpn sleep 1000
         podman cp ovpn_login:/var/lib/openvpn/ovpn_login .
     - name: Push to Docker Hub
@@ -65,4 +78,6 @@ jobs:
           podman pull docker.io/pcm0/openvpn
           Or to specify a build:
           podman pull docker.io/pcm0/openvpn:latest-alpine
+          podman pull docker.io/pcm0/openvpn:slim-alpine
           podman pull docker.io/pcm0/openvpn:${{ env.BUILD }}-alpine
+          podman pull docker.io/pcm0/openvpn:${{ env.BUILD }}-slim-alpine

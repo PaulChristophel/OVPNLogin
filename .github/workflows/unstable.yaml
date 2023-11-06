@@ -28,10 +28,15 @@ jobs:
       run: |
         podman pull golang:alpine
         podman pull alpine:edge
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . \
+        podman pull docker.io/alpine/k8s:1.28.3
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=app \
                      -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine \
                      -t $ACR_URL/pmartin47/openvpn:dev-alpine
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=slim \
+                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-slim-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-slim-alpine \
+                     -t $ACR_URL/pmartin47/openvpn:dev-slim-alpine
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
