@@ -33,7 +33,7 @@ test:
 clean:
 	go clean
 	go fmt ./...
-	rm -f $(debug_dir)/${BINARY_NAME} $(release_dir)/${BINARY_NAME}
+	rm -f $(debug_dir)/* $(release_dir)/*
 
 podman:
 	podman pull golang:alpine
