@@ -78,8 +78,8 @@ data:
   dh8192.pem: ""
   udp_server.conf: |-
     writepid /var/lib/openvpn/tmp/openvpn.pid
-    up "/bin/sh -c 'touch /var/lib/openvpn/tmp/alive'"
-    down "/bin/sh -c 'rm /var/lib/openvpn/tmp/alive'"
+    up "alive"
+    down "alive --down"
     cd /var/lib/openvpn
     multihome
     port 1194
@@ -112,8 +112,8 @@ data:
     mtu-test
   tcp_server.conf: |-
     writepid /var/lib/openvpn/tmp/openvpn.pid
-    up "/bin/sh -c 'touch /var/lib/openvpn/tmp/alive'"
-    down "/bin/sh -c 'rm /var/lib/openvpn/tmp/alive'"
+    up "alive"
+    down "alive --down"
     cd /var/lib/openvpn
     port 1194
     proto tcp

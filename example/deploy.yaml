@@ -51,7 +51,7 @@ spec:
         - mountPath: /dev/net
           name: net
       containers:
-      - image: docker.io/pcm0/openvpn:latest
+      - image: docker.io/pcm0/openvpn:slim
         securityContext:
           allowPrivilegeEscalation: false
           privileged: false
@@ -61,17 +61,16 @@ spec:
           capabilities:
             drop:
             - ALL
-          readOnlyRootFilesystem: true
         name: udp
         resources: {}
         command:
-        - /bin/sh
-        - -c
-        - /usr/sbin/openvpn --config /var/lib/openvpn/server.conf
+        - /usr/sbin/openvpn
+        - --config
+        - /var/lib/openvpn/server.conf
         readinessProbe:
           exec:
             command:
-            - test
+            - checkpath
             - /var/lib/openvpn/tmp/alive
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -128,7 +127,7 @@ spec:
         - mountPath: /dev/net
           name: net
 
-      - image: docker.io/pcm0/openvpn:latest
+      - image: docker.io/pcm0/openvpn:slim
         securityContext:
           allowPrivilegeEscalation: false
           privileged: false
@@ -138,13 +137,12 @@ spec:
           capabilities:
             drop:
             - all
-          readOnlyRootFilesystem: true
         name: tcp
         resources: {}
         command:
-        - /bin/sh
-        - -c
-        - /usr/sbin/openvpn --config /var/lib/openvpn/server.conf
+        - /usr/sbin/openvpn
+        - --config
+        - /var/lib/openvpn/server.conf
         ports:
         - containerPort: 1194
           name: openvpn-tcp
@@ -152,7 +150,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - test
+            - checkpath
             - /var/lib/openvpn/tmp/alive
           initialDelaySeconds: 5
           periodSeconds: 10
