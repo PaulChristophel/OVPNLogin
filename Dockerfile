@@ -32,7 +32,7 @@ ENTRYPOINT ["/usr/sbin/openvpn"]
 
 # Easiest way to get the libraries we care about and nothing else
 FROM alpine:edge AS slim-builder
-RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn
+RUN apk upgrade --update --no-cache && apk add --update --no-cache ca-certificates openvpn && rm -rf /lib/apk /lib/libapk* /usr/lib/openvpn
 
 FROM scratch as slim
 COPY --from=app /etc/passwd /etc/passwd
@@ -45,6 +45,7 @@ COPY --from=slim-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=slim-builder /lib /lib
 # COPY USR LIBS
 COPY --from=slim-builder /usr/lib /usr/lib
+COPY --from=app /sbin/ip_real /sbin/ip_real
 COPY --from=builder /usr/src/app/bin/release/ip_fake /sbin/ip
 COPY --from=builder /usr/src/app/bin/release/checkpath /sbin/checkpath
 COPY --from=builder /usr/src/app/bin/release/alive /sbin/alive
