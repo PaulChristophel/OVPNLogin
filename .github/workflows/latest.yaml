@@ -50,7 +50,6 @@ jobs:
                      -t $ACR_URL/pmartin47/openvpn:slim \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.BUILD }}-slim \
                      -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-slim-alpine
-
         podman run -d --name ovpn_login docker.io/pcm0/openvpn sleep 1000
         podman cp ovpn_login:/var/lib/openvpn/ovpn_login .
     - name: Push to Docker Hub
