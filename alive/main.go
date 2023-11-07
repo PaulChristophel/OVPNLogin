@@ -7,29 +7,29 @@ import (
 )
 
 func main() {
-	// Define a command line flag
 	downFlag := flag.Bool("down", false, "Set this flag to delete the file.")
-	flag.Parse() // Parse the flags
 
-	path := "/var/lib/openvpn/tmp/alive"
+	pathFlag := flag.String("path", "/var/lib/openvpn/tmp/alive", "The path to the file to create or delete.")
+
+	flag.Parse()
+
+	path := *pathFlag
 
 	if *downFlag {
-		// If the down flag is set, delete the file
 		err := os.Remove(path)
 		if err != nil {
 			log.Fatalf("Error deleting file: %v", err)
 		}
 	} else {
-		// Default behavior: Create the directory and file
-		if err := os.MkdirAll("/var/lib/openvpn/tmp", os.ModePerm); err != nil {
+		dir := path[:len(path)-len(flag.Arg(0))]
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			log.Printf("Error creating directories: %v", err)
 		}
 
-		// Create an empty file
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0644)
 		if err != nil {
 			log.Fatalf("Error creating file: %v", err)
 		}
-		file.Close() // Close the file immediately as we're just creating it
+		file.Close()
 	}
 }
