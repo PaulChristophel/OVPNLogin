@@ -93,12 +93,12 @@ data:
     dh dh8192.pem
     tls-crypt tls-crypt.pem
     server 10.0.0.0 255.255.0.0
-    ifconfig-pool-persist ipp.txt
+    ifconfig-pool-persist /var/lib/openvpn/tmp/ipp.txt
     tmp-dir /var/lib/openvpn/tmp
     keepalive 20 120
     persist-key
     persist-tun
-    status status.log
+    status /var/lib/openvpn/tmp/status.log
     verb 4
     script-security 2
     auth-user-pass-verify ovpn_login via-file
@@ -126,12 +126,12 @@ data:
     dh dh8192.pem
     tls-crypt tls-crypt.pem
     server 10.1.0.0 255.255.0.0
-    ifconfig-pool-persist ipp.txt
+    ifconfig-pool-persist /var/lib/openvpn/tmp/ipp.txt
     tmp-dir /var/lib/openvpn/tmp
     keepalive 20 120
     persist-key
     persist-tun
-    status status.log
+    status /var/lib/openvpn/tmp/status.log
     verb 4
     script-security 2
     auth-user-pass-verify ovpn_login via-file
