@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	file, err := os.OpenFile("/var/lib/openvpn/ip_res", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("/var/lib/openvpn/tmp/ip_res", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
