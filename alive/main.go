@@ -23,8 +23,8 @@ func main() {
 	// The cmdline argument is separated by NULL bytes; convert it to a string
 	// and compare it to the desired parent process name
 	parentCmd := strings.Split(string(cmdline), "\x00")[0]
-	if parentCmd != "/sbin/openvpn" {
-		log.Fatalf("This program can only be executed by /sbin/openvpn, not %s", parentCmd)
+	if parentCmd != "/sbin/openvpn" || parentCmd != "/usr/sbin/openvpn" {
+		log.Fatalf("This program can only be executed by {/usr}/sbin/openvpn, not %s", parentCmd)
 	}
 
 	downFlag := flag.Bool("down", false, "Set this flag to delete the file.")
