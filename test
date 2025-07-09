@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: sectigo-issuer
+    forwardfor: update
+    ingress.kubernetes.io/affinity: cookie
+    ingress.kubernetes.io/config-backend: |-
+      http-response del-header server
+      http-response del-header Server
+      http-response del-header x-powered-by
+      http-response del-header X-Powered-By
+    ingress.kubernetes.io/session-cookie-name: route
+    ingress.kubernetes.io/timeout-http-request: 30s
+    ingress.kubernetes.io/timeout-keep-alive: 10m
+    ingress.kubernetes.io/timeout-queue: 10m
+    ingress.kubernetes.io/timeout-server: 10m
+    ingress.kubernetes.io/timeout-server-fin: 10m
+    kubectl.kubernetes.io/last-applied-configuration: {}
+    kubernetes.io/ingress.class: haproxy-external
+    kubernetes.io/tls-acme: "true"
+    meta.helm.sh/release-name: openvpn
+    meta.helm.sh/release-namespace: openvpn
+    ssl-redirect: "true"
+    use-forwarded-proto: "true"
+  creationTimestamp: "2023-05-23T19:53:53Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: openvpn
+    app.kubernetes.io/name: openvpn
+    app.kubernetes.io/version: "v2.1.0"
+  name: openvpn-external
+  namespace: openvpn
+  resourceVersion: "293752784"
+  uid: ff169f7a-195c-4db4-9019-7caf707b1f58
+spec:
+  rules:
+  - host: vpn.salt.gatech.edu
+    http:
+      paths:
+      - backend:
+          service:
+            name: openvpn
+            port:
+              number: 1194
+        path: /.well-known
+        pathType: Prefix
+  tls:
+  - hosts:
+    - vpn.salt.gatech.edu
+    secretName: vpn.salt.gatech.edu
+status:
+  loadBalancer:
+    ingress:
+    - {}

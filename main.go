@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 
 	_ "github.com/lib/pq"
 )
@@ -77,12 +77,13 @@ func Validate(username string, providedPassword string) error {
 
 func loadConfig(file string) (*Config, error) {
 	config := &Config{}
-	content, err := toml.LoadFile(file)
-	if err == nil {
-		err = content.Unmarshal(config)
-		if err != nil {
-			return nil, err
-		}
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	err = toml.Unmarshal(content, config)
+	if err != nil {
+		return nil, err
 	}
 
 	// Load environment variables if fields are empty
@@ -101,19 +102,19 @@ func loadConfig(file string) (*Config, error) {
 	if config.Database.SSLMode == "" {
 		config.Database.SSLMode = os.Getenv("PGSSLMODE")
 		if config.Database.SSLMode == "" {
-			config.Database.SSLMode = "prefer" // Default PostgreSQL SSLMode
+			config.Database.SSLMode = "prefer"
 		}
 	}
 	if config.Database.Port == "" {
 		config.Database.Port = os.Getenv("PGPORT")
 		if config.Database.Port == "" {
-			config.Database.Port = "5432" // Default PostgreSQL port
+			config.Database.Port = "5432"
 		}
 	}
 	if config.Database.Table == "" {
 		config.Database.Table = os.Getenv("PGTABLE")
 		if config.Database.Table == "" {
-			config.Database.Table = "ovpn_login" // Default table
+			config.Database.Table = "ovpn_login"
 		}
 	}
 
