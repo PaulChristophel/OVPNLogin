@@ -39,8 +39,8 @@ podman:
 	podman pull golang:alpine
 	podman pull docker.io/alpine/k8s:1.29.0
 	podman pull alpine:edge
-	podman build . -t oitacr.azurecr.io/pmartin47/openvpn:latest --target=app
-	podman build . -t oitacr.azurecr.io/pmartin47/openvpn:slim --target=slim
+	podman build . --platform=linux/amd64 -t oitacr.azurecr.io/pmartin47/openvpn:latest --target=app
+	podman build . --platform=linux/amd64 -t oitacr.azurecr.io/pmartin47/openvpn:slim --target=slim
 
 push:
 	podman push oitacr.azurecr.io/pmartin47/openvpn:latest
