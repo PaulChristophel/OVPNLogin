@@ -7,7 +7,7 @@ RUN apk upgrade --update --no-cache && apk add --update --no-cache make
 COPY . .
 RUN make upgrade && make build mode=prod
 
-FROM docker.io/alpine/k8s:1.29.0 AS k8s
+FROM docker.io/alpine/k8s:1.30.14 AS k8s
 
 FROM alpine:edge AS app
 COPY --from=k8s /usr/bin/kubectl /usr/bin/
