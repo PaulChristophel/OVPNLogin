@@ -61,7 +61,11 @@ func Validate(username string, providedPassword string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close database connection: %v", err)
+		}
+	}()
 
 	var passwordMatch bool
 	query := fmt.Sprintf("SELECT (password = crypt($2, password)) as password_match FROM %s WHERE username = $1", config.Database.Table)

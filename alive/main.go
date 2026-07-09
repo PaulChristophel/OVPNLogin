@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+
 	"log"
 	"os"
 	"strings"
@@ -15,7 +15,7 @@ func main() {
 	procPath := fmt.Sprintf("/proc/%d/cmdline", ppid)
 
 	// Read the cmdline file which contains the command line of the parent process
-	cmdline, err := ioutil.ReadFile(procPath)
+	cmdline, err := os.ReadFile(procPath)
 	if err != nil {
 		log.Fatalf("Failed to read cmdline for PPID %d: %v", ppid, err)
 	}
@@ -50,6 +50,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error creating file: %v", err)
 		}
-		file.Close()
+		if err := file.Close(); err != nil {
+			log.Fatalf("Error closing file: %v", err)
+		}
 	}
 }

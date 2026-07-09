@@ -20,7 +20,7 @@ spec:
       securityContext:
         runAsUser: 0
         runAsGroup: 0
-        fsGroup: 101
+        fsGroup: 10001
       automountServiceAccountToken: false
       serviceAccountName: openvpn-service-reader
       initContainers:
@@ -56,8 +56,8 @@ spec:
           allowPrivilegeEscalation: false
           privileged: false
           runAsNonRoot: true
-          runAsUser: 100
-          runAsGroup: 101
+          runAsUser: 10001
+          runAsGroup: 10001
           readOnlyRootFilesystem: true
           capabilities:
             drop:
@@ -139,8 +139,8 @@ spec:
           allowPrivilegeEscalation: false
           privileged: false
           runAsNonRoot: true
-          runAsUser: 100
-          runAsGroup: 101
+          runAsUser: 10001
+          runAsGroup: 10001
           readOnlyRootFilesystem: true
           capabilities:
             drop:

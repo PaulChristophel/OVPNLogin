@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+
 	"log"
 	"os"
 	"strings"
@@ -15,7 +15,7 @@ func main() {
 	procPath := fmt.Sprintf("/proc/%d/cmdline", ppid)
 
 	// Read the cmdline file which contains the command line of the parent process
-	cmdline, err := ioutil.ReadFile(procPath)
+	cmdline, err := os.ReadFile(procPath)
 	if err != nil {
 		log.Fatalf("Failed to read cmdline for PPID %d: %v", ppid, err)
 	}
@@ -31,7 +31,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// Join the arguments with space, similar to how "$@" behaves in shell script
 	args := strings.Join(os.Args[1:], " ") + "\n"

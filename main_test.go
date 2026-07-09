@@ -2,12 +2,13 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestLoadConfigFromFile(t *testing.T) {
 	// Create a sample TOML configuration file
-	configFile := "test_config.toml"
+	configFile := filepath.Join(t.TempDir(), "test_config.toml")
 	fileContent := []byte(`
 [database]
 user = "test_user"
@@ -18,8 +19,9 @@ sslmode = "disable"
 port = "5432"
 table = "test_table"
 `)
-	os.WriteFile(configFile, fileContent, 0644)
-	defer os.Remove(configFile)
+	if err := os.WriteFile(configFile, fileContent, 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
 
 	config, err := loadConfig(configFile)
 	if err != nil {
@@ -33,16 +35,20 @@ table = "test_table"
 
 func TestLoadConfigFromEnvironment(t *testing.T) {
 	// Set environment variables
-	os.Setenv("PGUSER", "env_user")
-	os.Setenv("PGPASSWORD", "env_password")
-	os.Setenv("PGDATABASE", "env_db")
-	os.Setenv("PGHOST", "env_host")
-	os.Setenv("PGSSLMODE", "disable")
-	os.Setenv("PGPORT", "5432")
-	os.Setenv("PGTABLE", "env_table")
-	defer os.Clearenv()
+	t.Setenv("PGUSER", "env_user")
+	t.Setenv("PGPASSWORD", "env_password")
+	t.Setenv("PGDATABASE", "env_db")
+	t.Setenv("PGHOST", "env_host")
+	t.Setenv("PGSSLMODE", "disable")
+	t.Setenv("PGPORT", "5432")
+	t.Setenv("PGTABLE", "env_table")
 
-	config, err := loadConfig("nonexistent.toml")
+	configFile := filepath.Join(t.TempDir(), "empty_config.toml")
+	if err := os.WriteFile(configFile, nil, 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	config, err := loadConfig(configFile)
 	if err != nil {
 		t.Fatalf("loadConfig failed: %v", err)
 	}

@@ -5,22 +5,18 @@ on:
     # Pattern matched against refs/tags
     branches:
       - master
-    tags:
-      - '!v[0-9]*.[0-9]*.[0-9]*'
-      - '!v[0-9]*.[0-9]*.[0-9]*-[a-zA-Z]*.*'
-      - '!v[0-9]*.[0-9]*.[0-9]*-[a-zA-Z]*.[0-9]*.*'
   schedule:
     - cron: "0 10 * * *"
 
 jobs:
-  build-ovpn_login-dev:
+  build-ovpn_login:
     runs-on: ubuntu-22.04
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      ACR_URL: ${{ secrets.ACR_URL }}
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      K8S_IMAGE: docker.io/alpine/k8s:1.36.2
+      ALPINE_IMAGE: docker.io/library/alpine:3.24.1
+      OPENVPN_VERSION: 2.7.3-r0
     steps:
     - uses: actions/checkout@v3
     - name: Get Build Version
@@ -29,25 +25,16 @@ jobs:
     - name: Build ovpn_login
       run: |
         podman pull golang:alpine
-        podman pull alpine:edge
-        podman pull docker.io/alpine/k8s:1.28.4
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=app \
-                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:dev-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:dev
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} . --target=slim \
-                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}-slim-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:${{ env.SHORT_SHA }}-slim-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:dev-slim-alpine \
-                     -t $ACR_URL/pmartin47/openvpn:dev-slim
+        podman pull $K8S_IMAGE
+        podman pull $ALPINE_IMAGE
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE --build-arg OPENVPN_VERSION=$OPENVPN_VERSION . --target=app \
+                     -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE --build-arg OPENVPN_VERSION=$OPENVPN_VERSION . --target=slim \
+                     -t docker.io/pcm0/openvpn:slim-${{ env.SHORT_SHA }}
     - name: Push to Docker Hub
       run: |
         podman login docker.io --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
         podman images | awk "/docker.io\/pcm0/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
-        podman logout
-        podman login $ACR_URL --username $ACR_USERNAME --password $ACR_PASSWORD
-        podman images | awk "/$ACR_URL\/pmartin47/ { print \$1\":\"\$2 }" | xargs -I {} podman push {}
         podman logout
     - name: Docker System Prune
       run: |
