@@ -1,0 +1,322 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openvpn-router.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "openvpn-router.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "openvpn-router.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: init
+          image: "{{ .Values.image.repository }}:{{ include "openvpn-router.initImageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - /root/init.sh
+          {{- with .Values.initSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: openvpn-configmap
+              mountPath: /root/init.sh
+              subPath: init.sh
+            - name: openvpn-configmap
+              mountPath: /etc/sysctl.d/ipv4.conf
+              subPath: ipv4.conf
+            {{- if .Values.openvpn.dhParam.enabled }}
+            - name: openvpn-configmap
+              mountPath: /openvpn-config/dh8192.pem
+              subPath: dh8192.pem
+            {{- end }}
+            - name: openvpn-configmap
+              mountPath: /openvpn-config/ca.crt
+              subPath: ca.crt
+            {{- if and .Values.certificate.enabled (not .Values.openvpn.config.caCrt) }}
+            - name: openvpn-certificate
+              mountPath: /openvpn-certificate/ca.crt
+              subPath: ca.crt
+            {{- end }}
+            - name: openvpn-generated
+              mountPath: /openvpn-generated
+            - name: net
+              mountPath: /dev/net
+      containers:
+        - name: udp
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ include "openvpn-router.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/sbin/openvpn
+            - --config
+            - /var/lib/openvpn/server.conf
+          ports:
+            - name: openvpn-udp
+              containerPort: {{ .Values.service.ports.udp.targetPort }}
+              protocol: UDP
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmpudp
+              mountPath: /tmp
+            - name: tmpudp
+              mountPath: /var/lib/openvpn/tmp
+            - name: openvpn-configmap
+              mountPath: /etc/sysctl.d/ipv4.conf
+              subPath: ipv4.conf
+            - name: openvpn-configmap
+              mountPath: /var/lib/openvpn/server.conf
+              subPath: udp_server.conf
+            - name: openvpn-generated
+              mountPath: /var/lib/openvpn/ca.crt
+              subPath: ca.crt
+            {{- if .Values.certificate.enabled }}
+            - name: openvpn-certificate
+              mountPath: /var/lib/openvpn/tls.crt
+              subPath: tls.crt
+            {{- else }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls.crt
+              subPath: tls.crt
+            {{- end }}
+            {{- if .Values.openvpn.dhParam.enabled }}
+            - name: openvpn-generated
+              mountPath: /var/lib/openvpn/dh8192.pem
+              subPath: dh8192.pem
+            {{- end }}
+            {{- if .Values.openvpn.crypto.tlsCrypt }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls-crypt.pem
+              subPath: tls-crypt.pem
+            {{- end }}
+            {{- if .Values.certificate.enabled }}
+            - name: openvpn-certificate
+              mountPath: /var/lib/openvpn/tls.key
+              subPath: tls.key
+            {{- else }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls.key
+              subPath: tls.key
+            {{- end }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/ovpn_login.toml
+              subPath: ovpn_login.toml
+            - name: net
+              mountPath: /dev/net
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        - name: tcp
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ include "openvpn-router.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/sbin/openvpn
+            - --config
+            - /var/lib/openvpn/server.conf
+          ports:
+            - name: openvpn-tcp
+              containerPort: {{ .Values.service.ports.tcp.targetPort }}
+              protocol: TCP
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmptcp
+              mountPath: /tmp
+            - name: tmptcp
+              mountPath: /var/lib/openvpn/tmp
+            - name: openvpn-configmap
+              mountPath: /etc/sysctl.d/ipv4.conf
+              subPath: ipv4.conf
+            - name: openvpn-configmap
+              mountPath: /var/lib/openvpn/server.conf
+              subPath: tcp_server.conf
+            - name: openvpn-generated
+              mountPath: /var/lib/openvpn/ca.crt
+              subPath: ca.crt
+            {{- if .Values.certificate.enabled }}
+            - name: openvpn-certificate
+              mountPath: /var/lib/openvpn/tls.crt
+              subPath: tls.crt
+            {{- else }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls.crt
+              subPath: tls.crt
+            {{- end }}
+            {{- if .Values.openvpn.dhParam.enabled }}
+            - name: openvpn-generated
+              mountPath: /var/lib/openvpn/dh8192.pem
+              subPath: dh8192.pem
+            {{- end }}
+            {{- if .Values.openvpn.crypto.tlsCrypt }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls-crypt.pem
+              subPath: tls-crypt.pem
+            {{- end }}
+            {{- if .Values.certificate.enabled }}
+            - name: openvpn-certificate
+              mountPath: /var/lib/openvpn/tls.key
+              subPath: tls.key
+            {{- else }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/tls.key
+              subPath: tls.key
+            {{- end }}
+            - name: openvpn-secret
+              mountPath: /var/lib/openvpn/ovpn_login.toml
+              subPath: ovpn_login.toml
+            - name: net
+              mountPath: /dev/net
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          {{- with .Values.metrics.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          env:
+            - name: LISTEN_ADDRESS
+              value: {{ .Values.metrics.listenAddress | quote }}
+            - name: STATUS_PATHS
+              value: "/var/log/openvpn/udp/status.log,/var/log/openvpn/tcp/status.log"
+            - name: LOG_LEVEL
+              value: {{ .Values.metrics.logLevel | quote }}
+            - name: ALLOWED_IPS
+              value: {{ .Values.metrics.allowedIPs | quote }}
+            - name: IGNORE_INDIVIDUALS
+              value: {{ .Values.metrics.ignoreIndividuals | quote }}
+            {{- with .Values.metrics.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.metrics.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.metrics.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.metrics.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmpudp
+              mountPath: /var/log/openvpn/udp
+              readOnly: true
+            - name: tmptcp
+              mountPath: /var/log/openvpn/tcp
+              readOnly: true
+        {{- end }}
+      volumes:
+        - name: openvpn-configmap
+          configMap:
+            defaultMode: 420
+            name: {{ include "openvpn-router.fullname" . }}
+        - name: openvpn-secret
+          secret:
+            defaultMode: 256
+            secretName: {{ default (include "openvpn-router.fullname" .) .Values.openvpn.secretName }}
+        {{- if .Values.certificate.enabled }}
+        - name: openvpn-certificate
+          secret:
+            defaultMode: 256
+            secretName: {{ default (printf "%s-cert" (include "openvpn-router.fullname" .)) .Values.certificate.secretName }}
+            items:
+              {{- if and .Values.certificate.enabled (not .Values.openvpn.config.caCrt) }}
+              - key: {{ .Values.certificate.keys.caCrt }}
+                path: ca.crt
+              {{- end }}
+              - key: {{ .Values.certificate.keys.tlsCrt }}
+                path: tls.crt
+              - key: {{ .Values.certificate.keys.tlsKey }}
+                path: tls.key
+        {{- end }}
+        - name: openvpn-generated
+          emptyDir: {}
+        - name: tmpudp
+          emptyDir: {}
+        - name: tmptcp
+          emptyDir: {}
+        - name: net
+          emptyDir: {}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

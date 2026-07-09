@@ -1,0 +1,22 @@
+OpenVPN router has been installed.
+
+{{- if .Values.tcpRoute.enabled }}
+TCPRoute:
+  name: {{ include "openvpn-router.fullname" . }}-tcp
+  backendPort: {{ .Values.service.ports.tcp.port }}
+{{- end }}
+{{- if .Values.udpRoute.enabled }}
+UDPRoute:
+  name: {{ include "openvpn-router.fullname" . }}-udp
+  backendPort: {{ .Values.service.ports.udp.port }}
+{{- end }}
+
+Service:
+  name: {{ include "openvpn-router.fullname" . }}
+  type: {{ .Values.service.type }}
+  udp: {{ .Values.service.ports.udp.port }}
+  tcp: {{ .Values.service.ports.tcp.port }}
+
+Config:
+  fakeIP: {{ .Values.openvpn.fakeIP }}
+  serviceName: {{ .Values.openvpn.serviceName }}

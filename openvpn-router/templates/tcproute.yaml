@@ -1,0 +1,22 @@
+{{- if .Values.tcpRoute.enabled -}}
+apiVersion: {{ .Values.tcpRoute.apiVersion }}
+kind: TCPRoute
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}-tcp
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+  {{- with .Values.tcpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.tcpRoute.parentRefs | nindent 4 }}
+  rules:
+    {{- range .Values.tcpRoute.rules }}
+    - backendRefs:
+        - name: {{ include "openvpn-router.fullname" $ }}
+          port: {{ $.Values.service.ports.tcp.port }}
+          weight: {{ .weight | default 1 }}
+    {{- end }}
+{{- end }}

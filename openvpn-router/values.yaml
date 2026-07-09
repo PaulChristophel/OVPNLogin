@@ -1,0 +1,279 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/pcm0/openvpn
+  pullPolicy: IfNotPresent
+  tag: ""
+  initTag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+rbac:
+  create: true
+  serviceReader:
+    nameOverride: ""
+    verbs:
+      - get
+      - list
+
+certificate:
+  enabled: true
+  create: true
+  secretName: ""
+  duration: ""
+  renewBefore: ""
+  commonName: ""
+  dnsNames: []
+  ipAddresses: []
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  issuerRef:
+    name: ""
+    kind: Issuer
+    group: cert-manager.io
+  privateKey: {}
+    # algorithm: RSA
+    # size: 4096
+    # encoding: PKCS8
+  subject: {}
+  secretTemplate: {}
+  keys:
+    caCrt: ca.crt
+    tlsCrt: tls.crt
+    tlsKey: tls.key
+
+podAnnotations: {}
+podLabels: {}
+deploymentAnnotations: {}
+
+podSecurityContext:
+  runAsUser: 0
+  runAsGroup: 0
+  fsGroup: 10001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+initSecurityContext:
+  privileged: true
+  capabilities:
+    add:
+      - DAC_OVERRIDE
+      - NET_ADMIN
+      - NET_RAW
+      - MKNOD
+      - SETGID
+      - SETUID
+      - SYS_MODULE
+    drop:
+      - ALL
+
+openvpn:
+  fakeIP: 192.0.2.10
+  serviceName: openvpn
+  secretName: ""
+  secret:
+    create: true
+    tlsCrt: ""
+    tlsKey: ""
+    tlsCryptPem: ""
+    # Raw override for ovpn_login.toml. When empty, the file is generated
+    # from openvpn.loginConfig so individual fields can be encrypted.
+    ovpnLoginToml: ""
+  loginConfig:
+    database:
+      user: openvpn
+      password: ""
+      dbname: ""
+      host: ""
+      sslmode: require
+      port: "5432"
+      table: ovpn_login
+  dhParam:
+    enabled: false
+    bits: 8192
+  crypto:
+    tlsCrypt: false
+    tlsVersionMin: "1.2"
+    tlsGroups: X25519:secp256r1
+    dataCiphers:
+      - AES-256-GCM
+      - AES-128-GCM
+      - "?CHACHA20-POLY1305"
+    dataCiphersFallback: AES-256-CBC
+    auth: SHA512
+  logging:
+    verb: 4
+  keepalive:
+    interval: 10
+    timeout: 60
+  push:
+    ping: ""
+    pingRestart: ""
+  mtu:
+    tunMtu: 1300
+    mssfix: 1260
+    mtuDisc: "yes"
+    udpMtuTest: true
+    tcpMtuTest: false
+  config:
+    caCrt: ""
+    dh8192Pem: ""
+
+metrics:
+  enabled: false
+  image:
+    repository: ghcr.io/b4dcats/openvpn_exporter
+    tag: v2.0.3
+    pullPolicy: IfNotPresent
+  port: 9176
+  listenAddress: ":9176"
+  logLevel: INFO
+  allowedIPs: ""
+  ignoreIndividuals: false
+  extraEnv: []
+  resources: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: metrics
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /metrics
+      port: metrics
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  networkPolicy:
+    enabled: true
+    from: []
+
+service:
+  type: ClusterIP
+  annotations: {}
+  ports:
+    udp:
+      port: 1194
+      targetPort: 1194
+      nodePort: 31194
+    tcp:
+      port: 1194
+      targetPort: 1194
+      nodePort: 31194
+    metrics:
+      port: 9176
+      targetPort: 9176
+      nodePort: ""
+
+networkPolicy:
+  enabled: false
+  ingress:
+    enabled: true
+    # Empty from allows OpenVPN clients from any source.
+    from: []
+  egress:
+    enabled: false
+    to: []
+    ports: []
+  extraIngress: []
+  extraEgress: []
+
+# Expose OpenVPN TCP traffic through Gateway API.
+tcpRoute:
+  enabled: false
+  apiVersion: gateway.networking.k8s.io/v1alpha2
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      sectionName: openvpn-tcp
+      # namespace: default
+  rules:
+    - weight: 1
+
+# Expose OpenVPN UDP traffic through Gateway API.
+udpRoute:
+  enabled: false
+  apiVersion: gateway.networking.k8s.io/v1alpha2
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      sectionName: openvpn-udp
+      # namespace: default
+  rules:
+    - weight: 1
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  exec:
+    command:
+      - /sbin/checkpath
+      - /var/lib/openvpn/tmp/openvpn.pid
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 2
+
+readinessProbe:
+  exec:
+    command:
+      - /sbin/checkpath
+      - /var/lib/openvpn/tmp/alive
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

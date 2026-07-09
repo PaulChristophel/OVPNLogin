@@ -1,0 +1,226 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+data:
+  init.sh: |-
+    #!/bin/sh
+
+    mknod /dev/net/tun0 c 10 200 || echo "error setting: mknod /dev/net/tun0 c 10 200"
+    mknod /dev/net/tun1 c 10 200 || echo "error setting: mknod /dev/net/tun1 c 10 200"
+
+    chmod 600 /dev/net/tun0 || echo "error setting: chmod 600 /dev/net/tun0"
+    chmod 600 /dev/net/tun1 || echo "error setting: chmod 600 /dev/net/tun1"
+
+    chown openvpn:openvpn /dev/net/tun0 || echo "error setting: chown openvpn:openvpn /dev/net/tun0"
+    chown openvpn:openvpn /dev/net/tun1 || echo "error setting: chown openvpn:openvpn /dev/net/tun1"
+
+    if [ -d /lib/modules ]; then
+      modprobe tun || echo "error setting: modprobe tun"
+    else
+      echo "skipping modprobe tun: /lib/modules is not mounted"
+    fi
+    echo "tun" >> /etc/modules-load.d/tun.conf
+
+    if [ -s /openvpn-config/ca.crt ]; then
+      cp /openvpn-config/ca.crt /openvpn-generated/ca.crt
+    elif [ -s /openvpn-certificate/ca.crt ]; then
+      cp /openvpn-certificate/ca.crt /openvpn-generated/ca.crt
+    else
+      echo "missing ca.crt: set openvpn.config.caCrt or provide {{ .Values.certificate.keys.caCrt }} in certificate secret"
+      exit 1
+    fi
+    chown openvpn:openvpn /openvpn-generated/ca.crt || echo "error setting: chown openvpn:openvpn /openvpn-generated/ca.crt"
+    chmod 400 /openvpn-generated/ca.crt || echo "error setting: chmod 400 /openvpn-generated/ca.crt"
+
+    {{- if .Values.openvpn.dhParam.enabled }}
+    if [ -s /openvpn-config/dh8192.pem ]; then
+      cp /openvpn-config/dh8192.pem /openvpn-generated/dh8192.pem
+    else
+      openssl dhparam -out /openvpn-generated/dh8192.pem {{ .Values.openvpn.dhParam.bits }}
+    fi
+    chown openvpn:openvpn /openvpn-generated/dh8192.pem || echo "error setting: chown openvpn:openvpn /openvpn-generated/dh8192.pem"
+    chmod 400 /openvpn-generated/dh8192.pem || echo "error setting: chmod 400 /openvpn-generated/dh8192.pem"
+    {{- end }}
+
+    kubectl get svc --all-namespaces -o jsonpath='{range .items[?(@.metadata.name=="{{ .Values.openvpn.serviceName }}")]}{.metadata.namespace}{"\t"}{.spec.clusterIP}{"\t"}{range .spec.ports[?(@.nodePort)]}{.nodePort}{"\t"}{end}{"\n"}{end}' |\
+    awk 'BEGIN { system("iptables -t nat -F;") }
+        NF >= 4 {
+          low = $3;
+          high = $4;
+
+          if (low > high) {
+            tmp = low;
+            low = high;
+            high = tmp;
+          }
+
+          pre = "iptables -t nat -m comment --comment " $1 " -A PREROUTING -d {{ .Values.openvpn.fakeIP }} -p tcp --dport " low ":" high " -j DNAT --to-destination " $2;
+          udp = "iptables -t nat -A POSTROUTING -s 6.0.0.0/16 -m comment --comment " $1 " -d " $2 " -o eth0 -j MASQUERADE";
+          tcp = "iptables -t nat -A POSTROUTING -s 7.0.0.0/16 -m comment --comment " $1 " -d " $2 " -o eth0 -j MASQUERADE";
+
+          system(pre);
+          system(udp);
+          system(tcp);
+        }
+        END { system("iptables -t nat --list-rules;") }'
+
+    openvpn --rmtun --dev tun0
+    openvpn --mktun --dev tun0 --dev-type tun --user openvpn --group openvpn
+    openvpn --rmtun --dev tun1
+    openvpn --mktun --dev tun1 --dev-type tun --user openvpn --group openvpn
+
+    /sbin/ip_real link set dev tun0 up mtu 1500
+    /sbin/ip_real link set dev tun0 up
+    /sbin/ip_real addr add dev tun0 local 6.0.0.1 peer 6.0.0.2
+    /sbin/ip_real route add 6.0.0.0/16 via 6.0.0.2
+
+    /sbin/ip_real link set dev tun1 up mtu 1500
+    /sbin/ip_real link set dev tun1 up
+    /sbin/ip_real addr add dev tun1 local 7.0.0.1 peer 7.0.0.2
+    /sbin/ip_real route add 7.0.0.0/16 via 7.0.0.2
+
+    sysctl -p /etc/sysctl.d/ipv4.conf || echo "error applying sysctls from /etc/sysctl.d/ipv4.conf"
+
+    /sbin/ip_real route
+  ipv4.conf: |-
+    net.ipv4.ip_forward=1
+    net.ipv4.conf.all.accept_redirects=0
+    net.ipv4.conf.default.accept_redirects=0
+    net.ipv4.conf.all.send_redirects=0
+    net.ipv4.conf.default.send_redirects=0
+    net.ipv4.conf.all.rp_filter=2
+    net.ipv4.conf.default.rp_filter=2
+    net.ipv4.tcp_syncookies=1
+    net.ipv4.tcp_fastopen=5
+  ca.crt: {{ .Values.openvpn.config.caCrt | quote }}
+  {{- if .Values.openvpn.dhParam.enabled }}
+  dh8192.pem: {{ .Values.openvpn.config.dh8192Pem | quote }}
+  {{- end }}
+  udp_server.conf: |-
+    writepid /var/lib/openvpn/tmp/openvpn.pid
+    up "/sbin/alive"
+    down "/sbin/alive --down"
+    cd /var/lib/openvpn
+    multihome
+    port {{ .Values.service.ports.udp.targetPort }}
+    proto udp
+    dev tun0
+    float
+    ca ca.crt
+    cert tls.crt
+    key tls.key
+    auth-nocache
+    {{- if .Values.openvpn.dhParam.enabled }}
+    dh dh8192.pem
+    {{- else }}
+    dh none
+    {{- end }}
+    {{- if .Values.openvpn.crypto.tlsCrypt }}
+    tls-crypt tls-crypt.pem
+    {{- end }}
+    {{- with .Values.openvpn.crypto.tlsVersionMin }}
+    tls-version-min {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.crypto.tlsGroups }}
+    tls-groups {{ . }}
+    {{- end }}
+    server 6.0.0.0 255.255.0.0
+    ifconfig-noexec
+    route-noexec
+    ifconfig-pool-persist /var/lib/openvpn/tmp/ipp.txt
+    tmp-dir /var/lib/openvpn/tmp
+    keepalive {{ .Values.openvpn.keepalive.interval }} {{ .Values.openvpn.keepalive.timeout }}
+    persist-tun
+    status /var/lib/openvpn/tmp/status.log
+    verb {{ .Values.openvpn.logging.verb }}
+    script-security 2
+    auth-user-pass-verify /var/lib/openvpn/ovpn_login via-file
+    verify-client-cert none
+    username-as-common-name
+    data-ciphers {{ join ":" .Values.openvpn.crypto.dataCiphers }}
+    data-ciphers-fallback {{ .Values.openvpn.crypto.dataCiphersFallback }}
+    auth {{ .Values.openvpn.crypto.auth }}
+    push "route {{ .Values.openvpn.fakeIP }} 255.255.255.255"
+    {{- with .Values.openvpn.push.ping }}
+    push "ping {{ . }}"
+    {{- end }}
+    {{- with .Values.openvpn.push.pingRestart }}
+    push "ping-restart {{ . }}"
+    {{- end }}
+    {{- with .Values.openvpn.mtu.tunMtu }}
+    tun-mtu {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.mtu.mssfix }}
+    mssfix {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.mtu.mtuDisc }}
+    mtu-disc {{ . }}
+    {{- end }}
+    {{- if .Values.openvpn.mtu.udpMtuTest }}
+    mtu-test
+    {{- end }}
+  tcp_server.conf: |-
+    writepid /var/lib/openvpn/tmp/openvpn.pid
+    up "/sbin/alive"
+    down "/sbin/alive --down"
+    cd /var/lib/openvpn
+    port {{ .Values.service.ports.tcp.targetPort }}
+    proto tcp
+    dev tun1
+    float
+    ca ca.crt
+    cert tls.crt
+    key tls.key
+    auth-nocache
+    {{- if .Values.openvpn.dhParam.enabled }}
+    dh dh8192.pem
+    {{- else }}
+    dh none
+    {{- end }}
+    {{- if .Values.openvpn.crypto.tlsCrypt }}
+    tls-crypt tls-crypt.pem
+    {{- end }}
+    {{- with .Values.openvpn.crypto.tlsVersionMin }}
+    tls-version-min {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.crypto.tlsGroups }}
+    tls-groups {{ . }}
+    {{- end }}
+    server 7.0.0.0 255.255.0.0
+    ifconfig-noexec
+    route-noexec
+    ifconfig-pool-persist /var/lib/openvpn/tmp/ipp.txt
+    tmp-dir /var/lib/openvpn/tmp
+    keepalive {{ .Values.openvpn.keepalive.interval }} {{ .Values.openvpn.keepalive.timeout }}
+    persist-tun
+    status /var/lib/openvpn/tmp/status.log
+    verb {{ .Values.openvpn.logging.verb }}
+    script-security 2
+    auth-user-pass-verify /var/lib/openvpn/ovpn_login via-file
+    verify-client-cert none
+    username-as-common-name
+    data-ciphers {{ join ":" .Values.openvpn.crypto.dataCiphers }}
+    data-ciphers-fallback {{ .Values.openvpn.crypto.dataCiphersFallback }}
+    auth {{ .Values.openvpn.crypto.auth }}
+    push "route {{ .Values.openvpn.fakeIP }} 255.255.255.255"
+    {{- with .Values.openvpn.push.ping }}
+    push "ping {{ . }}"
+    {{- end }}
+    {{- with .Values.openvpn.push.pingRestart }}
+    push "ping-restart {{ . }}"
+    {{- end }}
+    {{- with .Values.openvpn.mtu.tunMtu }}
+    tun-mtu {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.mtu.mssfix }}
+    mssfix {{ . }}
+    {{- end }}
+    {{- with .Values.openvpn.mtu.mtuDisc }}
+    mtu-disc {{ . }}
+    {{- end }}
+    {{- if .Values.openvpn.mtu.tcpMtuTest }}
+    mtu-test
+    {{- end }}

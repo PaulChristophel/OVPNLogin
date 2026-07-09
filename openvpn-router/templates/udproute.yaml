@@ -1,0 +1,22 @@
+{{- if .Values.udpRoute.enabled -}}
+apiVersion: {{ .Values.udpRoute.apiVersion }}
+kind: UDPRoute
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}-udp
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+  {{- with .Values.udpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.udpRoute.parentRefs | nindent 4 }}
+  rules:
+    {{- range .Values.udpRoute.rules }}
+    - backendRefs:
+        - name: {{ include "openvpn-router.fullname" $ }}
+          port: {{ $.Values.service.ports.udp.port }}
+          weight: {{ .weight | default 1 }}
+    {{- end }}
+{{- end }}

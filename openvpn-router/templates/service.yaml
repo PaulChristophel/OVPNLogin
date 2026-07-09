@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.ports.udp.port }}
+      targetPort: {{ .Values.service.ports.udp.targetPort }}
+      {{- if eq .Values.service.type "NodePort" }}
+      {{- with .Values.service.ports.udp.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+      {{- end }}
+      protocol: UDP
+      name: openvpn-udp
+    - port: {{ .Values.service.ports.tcp.port }}
+      targetPort: {{ .Values.service.ports.tcp.targetPort }}
+      {{- if eq .Values.service.type "NodePort" }}
+      {{- with .Values.service.ports.tcp.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+      {{- end }}
+      protocol: TCP
+      name: openvpn-tcp
+    {{- if .Values.metrics.enabled }}
+    - port: {{ .Values.service.ports.metrics.port }}
+      targetPort: metrics
+      {{- if eq .Values.service.type "NodePort" }}
+      {{- with .Values.service.ports.metrics.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+      {{- end }}
+      protocol: TCP
+      name: metrics
+    {{- end }}
+  selector:
+    {{- include "openvpn-router.selectorLabels" . | nindent 4 }}

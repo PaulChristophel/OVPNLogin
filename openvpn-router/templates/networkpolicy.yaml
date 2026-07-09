@@ -1,0 +1,62 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openvpn-router.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    - Ingress
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  ingress:
+    - ports:
+        - port: {{ .Values.service.ports.udp.targetPort }}
+          protocol: UDP
+        - port: {{ .Values.service.ports.tcp.targetPort }}
+          protocol: TCP
+      {{- with .Values.networkPolicy.ingress.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- if and .Values.metrics.enabled .Values.metrics.networkPolicy.enabled }}
+    - ports:
+        - port: {{ .Values.metrics.port }}
+          protocol: TCP
+      {{- with .Values.metrics.networkPolicy.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- with .Values.networkPolicy.extraIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    {{- if .Values.networkPolicy.egress.to }}
+    - to:
+        {{- toYaml .Values.networkPolicy.egress.to | nindent 8 }}
+      {{- with .Values.networkPolicy.egress.ports }}
+      ports:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else if .Values.networkPolicy.egress.ports }}
+    - ports:
+        {{- toYaml .Values.networkPolicy.egress.ports | nindent 8 }}
+    {{- else if not .Values.networkPolicy.extraEgress }}
+    - {}
+    {{- end }}
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,45 @@
+{{- if and .Values.certificate.enabled .Values.certificate.create -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "openvpn-router.fullname" . }}
+  labels:
+    {{- include "openvpn-router.labels" . | nindent 4 }}
+spec:
+  secretName: {{ default (printf "%s-cert" (include "openvpn-router.fullname" .)) .Values.certificate.secretName }}
+  {{- with .Values.certificate.duration }}
+  duration: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.certificate.renewBefore }}
+  renewBefore: {{ . | quote }}
+  {{- end }}
+  commonName: {{ default (include "openvpn-router.fullname" .) .Values.certificate.commonName | quote }}
+  {{- with .Values.certificate.dnsNames }}
+  dnsNames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.certificate.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.certificate.usages }}
+  usages:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.certificate.privateKey }}
+  privateKey:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.certificate.subject }}
+  subject:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.certificate.secretTemplate }}
+  secretTemplate:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ required "certificate.issuerRef.name is required when certificate.enabled=true and certificate.create=true" .Values.certificate.issuerRef.name | quote }}
+    kind: {{ .Values.certificate.issuerRef.kind | quote }}
+    group: {{ .Values.certificate.issuerRef.group | quote }}
+{{- end }}
