@@ -16,7 +16,6 @@ jobs:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       K8S_IMAGE: docker.io/alpine/k8s:1.36.2
       ALPINE_IMAGE: docker.io/library/alpine:3.24.1
-      OPENVPN_VERSION: 2.7.3-r0
     steps:
     - uses: actions/checkout@v3
     - name: Get Build Version
@@ -27,9 +26,9 @@ jobs:
         podman pull golang:alpine
         podman pull $K8S_IMAGE
         podman pull $ALPINE_IMAGE
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE --build-arg OPENVPN_VERSION=$OPENVPN_VERSION . --target=app \
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE . --target=app \
                      -t docker.io/pcm0/openvpn:${{ env.SHORT_SHA }}
-        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE --build-arg OPENVPN_VERSION=$OPENVPN_VERSION . --target=slim \
+        podman build -f Dockerfile --build-arg BUILD=${{ env.SHORT_SHA }} --build-arg K8S_IMAGE=$K8S_IMAGE --build-arg ALPINE_IMAGE=$ALPINE_IMAGE . --target=slim \
                      -t docker.io/pcm0/openvpn:slim-${{ env.SHORT_SHA }}
     - name: Push to Docker Hub
       run: |
