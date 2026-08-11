@@ -4,9 +4,12 @@ src_dir = $(CURDIR)
 build_dir = $(CURDIR)/bin
 debug_dir = $(build_dir)/debug
 release_dir = $(build_dir)/release
-K8S_IMAGE = docker.io/alpine/k8s:1.36.2
-ALPINE_IMAGE = docker.io/library/alpine:3.24.1
-OPENVPN_VERSION = 2.7.5
+IMAGE_NAME = $(shell jq -r '.image' images.json)
+GOLANG_IMAGE = $(shell jq -r '.build.golang_image' images.json)
+K8S_IMAGE = $(shell jq -r '.build.k8s_image' images.json)
+ALPINE_IMAGE = $(shell jq -r '.build.alpine_image' images.json)
+OPENVPN_VERSION = $(shell jq -r '.openvpn.version' images.json)
+OPENVPN_SHA512 = $(shell jq -r '.openvpn.sha512' images.json)
 .DEFAULT_GOAL := build
 mode = dev
 
@@ -47,17 +50,17 @@ clean:
 	rm -f $(debug_dir)/* $(release_dir)/*
 
 podman:
-	/opt/homebrew/bin/podman pull golang:alpine
+	/opt/homebrew/bin/podman pull $(GOLANG_IMAGE)
 	/opt/homebrew/bin/podman pull $(K8S_IMAGE)
 	/opt/homebrew/bin/podman pull $(ALPINE_IMAGE)
-	/opt/homebrew/bin/podman build . --platform=linux/amd64 --build-arg=K8S_IMAGE=$(K8S_IMAGE) --build-arg=ALPINE_IMAGE=$(ALPINE_IMAGE) --build-arg=OPENVPN_VERSION=$(OPENVPN_VERSION) -t docker.io/pcm0/openvpn:latest -t docker.io/pcm0/openvpn:$(OPENVPN_VERSION) --target=app
-	/opt/homebrew/bin/podman build . --platform=linux/amd64 --build-arg=K8S_IMAGE=$(K8S_IMAGE) --build-arg=ALPINE_IMAGE=$(ALPINE_IMAGE) --build-arg=OPENVPN_VERSION=$(OPENVPN_VERSION) -t docker.io/pcm0/openvpn:slim -t docker.io/pcm0/openvpn:slim-$(OPENVPN_VERSION) --target=slim
+	/opt/homebrew/bin/podman build --platform=linux/amd64 --build-arg=GOLANG_IMAGE=$(GOLANG_IMAGE) --build-arg=K8S_IMAGE=$(K8S_IMAGE) --build-arg=ALPINE_IMAGE=$(ALPINE_IMAGE) --build-arg=OPENVPN_VERSION=$(OPENVPN_VERSION) --build-arg=OPENVPN_SHA512=$(OPENVPN_SHA512) --target=app -t $(IMAGE_NAME):latest -t $(IMAGE_NAME):$(OPENVPN_VERSION) .
+	/opt/homebrew/bin/podman build --platform=linux/amd64 --build-arg=GOLANG_IMAGE=$(GOLANG_IMAGE) --build-arg=K8S_IMAGE=$(K8S_IMAGE) --build-arg=ALPINE_IMAGE=$(ALPINE_IMAGE) --build-arg=OPENVPN_VERSION=$(OPENVPN_VERSION) --build-arg=OPENVPN_SHA512=$(OPENVPN_SHA512) --target=slim -t $(IMAGE_NAME):slim -t $(IMAGE_NAME):slim-$(OPENVPN_VERSION) .
 	
 podman-push:
-	/opt/homebrew/bin/podman push docker.io/pcm0/openvpn:latest
-	/opt/homebrew/bin/podman push docker.io/pcm0/openvpn:$(OPENVPN_VERSION)
-	/opt/homebrew/bin/podman push docker.io/pcm0/openvpn:slim
-	/opt/homebrew/bin/podman push docker.io/pcm0/openvpn:slim-$(OPENVPN_VERSION)
+	/opt/homebrew/bin/podman push $(IMAGE_NAME):latest
+	/opt/homebrew/bin/podman push $(IMAGE_NAME):$(OPENVPN_VERSION)
+	/opt/homebrew/bin/podman push $(IMAGE_NAME):slim
+	/opt/homebrew/bin/podman push $(IMAGE_NAME):slim-$(OPENVPN_VERSION)
 
 helm:
 	/opt/homebrew/bin/helm dependency update ./openvpn-router
