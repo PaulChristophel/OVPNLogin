@@ -40,8 +40,23 @@ jobs:
       - name: Read image configuration
         id: matrix
         run: |
-          echo "configuration=$(jq -c '{image, openvpn, build}' images.json)" >> "$GITHUB_OUTPUT"
-          echo "variants=$(jq -c '.variants' images.json)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          jq -e '
+            .image and
+            .openvpn.version and
+            .openvpn.sha512 and
+            .build.golang_image and
+            .build.k8s_image and
+            .build.alpine_image and
+            (.variants | type == "array" and length > 0)
+          ' images.json > /dev/null
+
+          configuration="$(jq -c '{image, openvpn, build}' images.json)"
+          variants="$(jq -c '.variants' images.json)"
+
+          echo "configuration=$configuration" >> "$GITHUB_OUTPUT"
+          echo "variants=$variants" >> "$GITHUB_OUTPUT"
 
   build:
     name: OpenVPN ${{ fromJSON(needs.prepare.outputs.configuration).openvpn.version }} ${{ matrix.variant.name }}

@@ -1,0 +1,24 @@
+{
+  "image": "docker.io/pcm0/openvpn",
+  "openvpn": {
+    "version": "2.7.6",
+    "sha512": "2e45d147f0983b6f343b6772c20b17e67bff0143e7bcf3c2a10551b77d9929c64c86e53b4ade5493023517f3ccd92b0c1011d03cb3543321d0f9faea408e6020"
+  },
+  "build": {
+    "golang_image": "docker.io/library/golang:alpine",
+    "k8s_image": "docker.io/alpine/k8s:1.36.2",
+    "alpine_image": "docker.io/library/alpine:3.24.1"
+  },
+  "variants": [
+    {
+      "target": "app",
+      "name": "app",
+      "tag_prefix": ""
+    },
+    {
+      "target": "slim",
+      "name": "slim",
+      "tag_prefix": "slim-"
+    }
+  ]
+}
