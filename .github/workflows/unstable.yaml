@@ -96,6 +96,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=${{ matrix.variant.tag_prefix }}
+            type=raw,value=${{ env.OPENVPN_VERSION }},prefix=${{ matrix.variant.tag_prefix }}
           annotations: |
             org.opencontainers.image.title=OpenVPN ${{ env.OPENVPN_VERSION }} (${{ matrix.variant.name }})
             org.opencontainers.image.description=OpenVPN ${{ env.OPENVPN_VERSION }} with OVPNLogin authentication support using the ${{ matrix.variant.name }} target.
