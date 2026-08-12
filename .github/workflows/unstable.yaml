@@ -49,6 +49,7 @@ jobs:
             .build.golang_image and
             .build.k8s_image and
             .build.alpine_image and
+            .build.alpine_version and
             (.variants | type == "array" and length > 0)
           ' images.json > /dev/null
 
@@ -64,7 +65,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: ${{ fromJSON(needs.prepare.outputs.configuration).image }}
+      IMAGE_REF: ${{ format('{0}:{1}{2}', fromJSON(needs.prepare.outputs.configuration).image, matrix.variant.tag_prefix, fromJSON(needs.prepare.outputs.configuration).openvpn.version) }}
       OPENVPN_VERSION: ${{ fromJSON(needs.prepare.outputs.configuration).openvpn.version }}
+      RUNTIME_BASE: ${{ fromJSON(needs.prepare.outputs.configuration).build.alpine_image }}
+      RUNTIME_VERSION: ${{ fromJSON(needs.prepare.outputs.configuration).build.alpine_version }}
     strategy:
       fail-fast: false
       matrix:
@@ -107,10 +111,37 @@ jobs:
             org.opencontainers.image.documentation=https://github.com/PaulChristophel/OVPNLogin#readme
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.build-time.outputs.created }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
             org.opencontainers.image.version=${{ env.OPENVPN_VERSION }}
+            org.opencontainers.image.ref.name=${{ env.IMAGE_REF }}
+            org.opencontainers.image.base.name=${{ env.RUNTIME_BASE }}
             org.opencontainers.image.component.openvpn.version=${{ env.OPENVPN_VERSION }}
             edu.gatech.image.owner=Paul Christophel <pmartin@gatech.edu>
             edu.gatech.image.repository=${{ env.IMAGE_NAME }}
+            edu.gatech.image.variant=${{ matrix.variant.name }}
+            edu.gatech.image.os.distribution=alpine
+            edu.gatech.image.os.version=${{ env.RUNTIME_VERSION }}
+          labels: |
+            maintainer=Paul Christophel <pmartin@gatech.edu>
+            org.opencontainers.image.title=OpenVPN ${{ env.OPENVPN_VERSION }} (${{ matrix.variant.name }})
+            org.opencontainers.image.description=OpenVPN ${{ env.OPENVPN_VERSION }} with OVPNLogin authentication support using the ${{ matrix.variant.name }} target.
+            org.opencontainers.image.authors=Paul Christophel <pmartin@gatech.edu>
+            org.opencontainers.image.vendor=Paul Christophel
+            org.opencontainers.image.source=https://github.com/PaulChristophel/OVPNLogin
+            org.opencontainers.image.url=https://hub.docker.com/r/pcm0/openvpn
+            org.opencontainers.image.documentation=https://github.com/PaulChristophel/OVPNLogin#readme
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.build-time.outputs.created }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+            org.opencontainers.image.version=${{ env.OPENVPN_VERSION }}
+            org.opencontainers.image.ref.name=${{ env.IMAGE_REF }}
+            org.opencontainers.image.base.name=${{ env.RUNTIME_BASE }}
+            org.opencontainers.image.component.openvpn.version=${{ env.OPENVPN_VERSION }}
+            edu.gatech.image.owner=Paul Christophel <pmartin@gatech.edu>
+            edu.gatech.image.repository=${{ env.IMAGE_NAME }}
+            edu.gatech.image.variant=${{ matrix.variant.name }}
+            edu.gatech.image.os.distribution=alpine
+            edu.gatech.image.os.version=${{ env.RUNTIME_VERSION }}
 
       - name: Build and push image
         id: push

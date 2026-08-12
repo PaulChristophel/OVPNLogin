@@ -5,9 +5,10 @@
     "sha512": "2e45d147f0983b6f343b6772c20b17e67bff0143e7bcf3c2a10551b77d9929c64c86e53b4ade5493023517f3ccd92b0c1011d03cb3543321d0f9faea408e6020"
   },
   "build": {
-    "golang_image": "docker.io/library/golang:alpine",
-    "k8s_image": "docker.io/alpine/k8s:1.36.2",
-    "alpine_image": "docker.io/library/alpine:3.24.1"
+    "golang_image": "docker.io/library/golang:1.26.5-alpine3.24@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2",
+    "k8s_image": "docker.io/alpine/k8s:1.36.2@sha256:44ef4942e171939b9c665a4a84beb80e2dcdb9a24330d4651cfdfd2e9deecc47",
+    "alpine_image": "docker.io/library/alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+    "alpine_version": "3.24.1"
   },
   "variants": [
     {
