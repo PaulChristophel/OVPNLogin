@@ -5,7 +5,7 @@ ARG OPENVPN_VERSION=2.7.6
 ARG OPENVPN_SHA512=2e45d147f0983b6f343b6772c20b17e67bff0143e7bcf3c2a10551b77d9929c64c86e53b4ade5493023517f3ccd92b0c1011d03cb3543321d0f9faea408e6020
 
 FROM ${GOLANG_IMAGE} AS builder
-ARG GOLANGCI_LINT_VERSION=v2.12.2
+ARG GOLANGCI_LINT_VERSION=v2.13.0
 WORKDIR /usr/src/app
 RUN apk upgrade --update --no-cache && apk add --update --no-cache curl make
 RUN curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b "$(go env GOPATH)/bin" "${GOLANGCI_LINT_VERSION}"
