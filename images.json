@@ -1,7 +1,7 @@
 {
   "image": "docker.io/pcm0/openvpn",
   "openvpn": {
-    "version": "2.7.7",
+    "version": "2.7.8",
     "sha512": "1461dbe00e35219c06c0e8f5836877522a8d5db786a6f3a6049aebdbb0b326dd816a6fc3197ebd3a5c1019a54e703d52c28af77c747e266e31438d1a9f64b631"
   },
   "build": {
