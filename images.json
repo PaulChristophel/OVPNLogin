@@ -2,7 +2,7 @@
   "image": "docker.io/pcm0/openvpn",
   "openvpn": {
     "version": "2.7.7",
-    "sha512": "27c12b94569c21fb09a081607bca8d959f70039d72335b6bf4a39d4fe02ddd1b60d8787594e0b878b1237892fd4372cf9888373609fde1469f9636eeb6ecb541"
+    "sha512": "1461dbe00e35219c06c0e8f5836877522a8d5db786a6f3a6049aebdbb0b326dd816a6fc3197ebd3a5c1019a54e703d52c28af77c747e266e31438d1a9f64b631"
   },
   "build": {
     "golang_image": "docker.io/library/golang:1.27.1-alpine3.24@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125",

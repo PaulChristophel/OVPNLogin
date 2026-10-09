@@ -213,7 +213,7 @@ networkPolicy:
 # Expose OpenVPN TCP traffic through Gateway API.
 tcpRoute:
   enabled: false
-  apiVersion: gateway.networking.k8s.io/v1alpha2
+  apiVersion: gateway.networking.k8s.io/v1
   annotations: {}
   parentRefs:
     - name: gateway
@@ -225,7 +225,7 @@ tcpRoute:
 # Expose OpenVPN UDP traffic through Gateway API.
 udpRoute:
   enabled: false
-  apiVersion: gateway.networking.k8s.io/v1alpha2
+  apiVersion: gateway.networking.k8s.io/v1
   annotations: {}
   parentRefs:
     - name: gateway
